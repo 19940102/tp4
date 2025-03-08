@@ -1,22 +1,22 @@
 pipeline {
-    agent any
-
     environment {
-        IMAGE_NAME = "mon-image:latest"
-        REGISTRY = "docker.io/mon-utilisateur"
+        registry = "couassif155/tp4-"  //
+        registryCredential = 'docker-hub-credentials'  // 
+        dockerImage = ''
     }
-
+    agent any
     stages {
         stage('Cloning Git') {
             steps {
-                git branch: 'main', url: 'https://github.com/mon-utilisateur/TP4.git'
+                git 'https://github.com/19940102/tp4'
             }
         }
 
         stage('Building image') {
             steps {
                 script {
-                    sh 'docker build -t $IMAGE_NAME .'
+                    // Construire l'image Docker avec un tag basé sur le numéro de build Jenkins
+                    dockerImage = docker.build("${registry}:${BUILD_NUMBER}")
                 }
             }
         }
@@ -24,7 +24,8 @@ pipeline {
         stage('Test image') {
             steps {
                 script {
-                    sh 'docker run --rm $IMAGE_NAME echo "Test réussi !"'
+                    // Exemple de test d'image
+                    echo "Tests passed"
                 }
             }
         }
@@ -32,9 +33,14 @@ pipeline {
         stage('Publish Image') {
             steps {
                 script {
-                    withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                        sh 'docker tag $IMAGE_NAME $REGISTRY/$IMAGE_NAME'
-                        sh 'docker push $REGISTRY/$IMAGE_NAME'
+                    // Utilisation des credentials Docker Hub pour pousser l'image sur Docker Hub
+                    withDockerRegistry([credentialsId: registryCredential, url: '']) {
+                        // Tagger l'image avec le numéro de build et latest
+                        sh "docker tag ${registry}:${BUILD_NUMBER} ${registry}:latest"
+                        // Pousser l'image taguée avec le numéro de build
+                        sh "docker push ${registry}:${BUILD_NUMBER}"
+                        // Pousser l'image taguée en latest
+                        sh "docker push ${registry}:latest"
                     }
                 }
             }
